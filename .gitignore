@@ -1,0 +1,12 @@
+__pycache__
+__pycache__/
+*.pyc
+build
+dist
+Arelle.egg-info
+.eggs
+.venv*
+.venv38
+.vscode
+req.txt
+
