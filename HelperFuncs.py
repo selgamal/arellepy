@@ -297,7 +297,7 @@ def selectRunEnv(env, workingDir=None, appDir=None, srcDir=None):
                 myPaths = [
                     srcDir, # Target source dir
                     os.path.join(srcDir, "arelle"), # arelle package dir
-                    os.path.join(srcDir, "plugin/arelle"), # plugins dir in source
+                    os.path.join(srcDir, "arelle/plugin"), # plugins dir in source
                     workingDir if workingDir else os.getcwd() # workings dir containing any additional modules to include
                     ]
                 # Add myPaths to sys.path
@@ -330,8 +330,8 @@ def selectRunEnv(env, workingDir=None, appDir=None, srcDir=None):
                 # # TK and TCL env vars are need to accomedate launching arelle GUI from App
                 # # TK/TCL env vars provides path to libs, note that tk and tcl DLLs must be in
                 # # the current working directory when on execution
-                os.environ["TCL_LIBRARY"] = os.path.join(appDir, 'tcl')
-                os.environ["TK_LIBRARY"] = os.path.join(appDir, 'tk')
+                # os.environ["TCL_LIBRARY"] = os.path.join(appDir, 'tcl')
+                # os.environ["TK_LIBRARY"] = os.path.join(appDir, 'tk')
 
                 # set root for resource dir to be used by Cntlr module
                 targetResDir = appDir
