@@ -25,6 +25,11 @@ print('FROZEN STAT:', getattr(sys, 'frozen', 'not frozen!'))
 
 def arelleCmdLineRun(args, configDir=None):
     '''For launching gui from python script...for whatever reason'''
+    # prevents duplicating log print on re-runs
+    _logger = logging.getLogger('arelle')
+    for x in _logger.handlers:
+        if type(x).__name__ == 'LogToPrintHandler': # should remove all handlers on run, but this for now
+            _logger.removeHandler(x)
     from arelle import CntlrCmdLine
     if os.environ.get("XDG_ARELLE_RESOURCES_DIR"):
         resourcesFunc = CntlrCmdLine.Cntlr.resourcesDir
@@ -36,12 +41,11 @@ def arelleCmdLineRun(args, configDir=None):
         if not os.path.isdir(configDir):
             os.mkdir(configDir)
 
-    addArgs = '--xdgConfigHome={} --keepOpen'.format(configDir)
+    addArgs = '{}--keepOpen'.format('--xdgConfigHome={} '.format(configDir if configDir else ''))
     allArgs =  addArgs + ' ' + args
     args = shlex.split(allArgs)
     gettext.install("arelle")
     c = CntlrCmdLine.parseAndRun(args)
-
     return c
     
 
