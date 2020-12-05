@@ -10,3 +10,4 @@ Arelle.egg-info
 .vscode
 req.txt
 .inprogress.py
+arellepyConfig.json

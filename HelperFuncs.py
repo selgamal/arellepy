@@ -327,9 +327,10 @@ def selectRunEnv(env, workingDir=None, appDir=None, srcDir=None):
                 for p in appPaths:
                     if p not in sys.path:
                         sys.path.append(p)
-                # # TK and TCL env vars are need to accomedate launching arelle GUI from App
+                # # TK and TCL env vars are need to accommodate launching arelle GUI from python
                 # # TK/TCL env vars provides path to libs, note that tk and tcl DLLs must be in
-                # # the current working directory when on execution
+                # # the current working directory when on execution 
+                # # This changed in recent versions
                 # os.environ["TCL_LIBRARY"] = os.path.join(appDir, 'tcl')
                 # os.environ["TK_LIBRARY"] = os.path.join(appDir, 'tk')
 
