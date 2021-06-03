@@ -124,7 +124,7 @@ def getDups(mx, cntlr):
 
 
 def xbrlLoaded(cntlr, options, modelXbrl, *args, **kwargs):
-    getDups(mx=modelXbrl)
+    getDups(mx=modelXbrl, cntlr=cntlr)
 
 
 # dummy function for class 'Cntlr.Init' to force arelle gui to reload
