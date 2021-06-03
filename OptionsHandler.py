@@ -288,6 +288,9 @@ class OptionsHandler:
         parser.add_option("--viewarcrole", action="store", dest="viewArcrole", help=SUPPRESS_HELP)
         parser.add_option("--viewFile", action="store", dest="viewFile",
                         help=_("Write linkbase relationships for viewArcrole into viewFile"))
+        parser.add_option("--relationshipCols", action="store", dest="relationshipCols",
+                        help=_("Extra columns for relationship file (comma or space separated: Name, Namespace, LocalName, Documentation and References)"))
+        parser.add_option("--relationshipcols", action="store", dest="relationshipCols", help=SUPPRESS_HELP)
         parser.add_option("--viewfile", action="store", dest="viewFile", help=SUPPRESS_HELP)
         parser.add_option("--roleTypes", action="store", dest="roleTypesFile",
                         help=_("Write defined role types into FILE"))
@@ -380,6 +383,8 @@ class OptionsHandler:
         parser.add_option("--formulaunsatisfiedasser", action="store_true", dest="formulaUnsatisfiedAsser", help=SUPPRESS_HELP)
         parser.add_option("--formulaUnsatisfiedAsserError", action="store_true", dest="formulaUnsatisfiedAsserError", help=_("Specify formula tracing."))
         parser.add_option("--formulaunsatisfiedassererror", action="store_true", dest="formulaUnsatisfiedAsserError", help=SUPPRESS_HELP)
+        parser.add_option("--formulaUnmessagedUnsatisfiedAsser", action="store_true", dest="formulaUnmessagedUnsatisfiedAsser", help=_("Specify trace messages for unsatisfied assertions with no formula messages."))
+        parser.add_option("--formulaunmessagedunsatisfiedasser", action="store_true", dest="formulaUnmessagedUnsatisfiedAsser", help=SUPPRESS_HELP)
         parser.add_option("--formulaFormulaRules", action="store_true", dest="formulaFormulaRules", help=_("Specify formula tracing."))
         parser.add_option("--formulaformularules", action="store_true", dest="formulaFormulaRules", help=SUPPRESS_HELP)
         parser.add_option("--formulaVarsOrder", action="store_true", dest="formulaVarsOrder", help=_("Specify formula tracing."))
@@ -399,6 +404,8 @@ class OptionsHandler:
         parser.add_option("--testcaseResultsCaptureWarnings", action="store_true", dest="testcaseResultsCaptureWarnings",
                         help=_("For testcase variations capture warning results, default is inconsistency or warning if there is any warning expected result.  "))
         parser.add_option("--testcaseresultscapturewarnings", action="store_true", dest="testcaseResultsCaptureWarnings", help=SUPPRESS_HELP)
+        parser.add_option("--testcaseResultOptions", choices=("match-any", "match-all"), action="store", dest="testcaseResultOptions",
+                        help=_("For testcase results, default is match any expected result, options to match any or match all expected result(s).  "))
         parser.add_option("--formulaRunIDs", action="store", dest="formulaRunIDs", help=_("Specify formula/assertion IDs to run, separated by a '|' character."))
         parser.add_option("--formularunids", action="store", dest="formulaRunIDs", help=SUPPRESS_HELP)
         parser.add_option("--formulaCompileOnly", action="store_true", dest="formulaCompileOnly", help=_("Specify formula are to be compiled but not executed."))
@@ -418,7 +425,7 @@ class OptionsHandler:
         parser.add_option("--internetTimeout", type="int", dest="internetTimeout", 
                         help=_("Specify internet connection timeout in seconds (0 means unlimited)."))
         parser.add_option("--internettimeout", type="int", action="store", dest="internetTimeout", help=SUPPRESS_HELP)
-        parser.add_option("--internetRecheck", choices=("weekly", "daily", "never"), dest="internetRecheck", 
+        parser.add_option("--internetRecheck", choices=("weekly", "daily", "never"), action="store", dest="internetRecheck", 
                         help=_("Specify rechecking cache files (weekly is default)"))
         parser.add_option("--internetrecheck", choices=("weekly", "daily", "never"), action="store", dest="internetRecheck", help=SUPPRESS_HELP)
         parser.add_option("--internetLogDownloads", action="store_true", dest="internetLogDownloads", 
@@ -461,7 +468,6 @@ class OptionsHandler:
                             help=_("start web server on host:port[:server] for REST and web access, e.g., --webserver locahost:8080, "
                                     "or specify nondefault a server name, such as cherrypy, --webserver locahost:8080:cherrypy. "
                                     "(It is possible to specify options to be defaults for the web server, such as disclosureSystem and validations, but not including file names.) "))
-        
         pluginOptionsIndex = len(parser.option_list)
 
         # MODIFIED:

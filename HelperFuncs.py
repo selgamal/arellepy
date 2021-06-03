@@ -391,7 +391,7 @@ def getExtractedXbrlInstance(url):
     # if not found get it from index page
     else:
         # parse index page
-        index = rssItem.find('link').text
+        index = url.find('link').text
         page = request.urlopen(index)
         tree = html.parse(page)
         extractedPath = tree.xpath('.//table[contains(@summary, "Data Files")]//*[contains(text(), "EXTRACTED")]/ancestor::tr/td[3]//@href')[0]
