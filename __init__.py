@@ -96,6 +96,36 @@ def utilityRun(cntlr, options, **kwargs):
                     messageCode="arellepy.Error",  file=__name__,  level=logging.ERROR)
             raise Exception(_('Only one of  "--arellepyRunFormulaFromDB" or "--arellepyRunFormula" can be chosen'))
 
+def getDups(mx, cntlr):
+    from arelle.ModelValue import qname
+    from arelle.ValidateXbrlCalcs import inferredPrecision
+    dupIds = set()
+    processedFactsSet = set()
+    if not getattr(mx, 'facts', False):
+        return
+    l1 =  mx.facts
+    for f1 in l1:
+        if f1.id in dupIds or f1.id in processedFactsSet:
+            continue
+        else:
+            dups = [f2 for f2 in l1 if f2.isDuplicateOf(f1)]
+            if len(dups)>0:
+                dups.append(f1) # to compare to duplicates and get the most precise
+                dups.sort(key=lambda x: inferredPrecision(x), reverse=True)
+                most_precise = dups.pop(0)
+                processedFactsSet.add(most_precise.id)
+                for dupF in dups:
+                    dupIds.add(dupF.id)
+            else:
+                processedFactsSet.add(f1)
+    mx.modelManager.showStatus(_(f'Found {len(dupIds)} duplicate Facts'))
+    mx.dupFactsIds = dupIds
+    cntlr.modelManager.formulaOptions.parameterValues[qname('param_DUPs_IDs')] = (None, dupIds) #(None,'|'.join(dupIds))
+
+
+def xbrlLoaded(cntlr, options, modelXbrl, *args, **kwargs):
+    getDups(mx=modelXbrl)
+
 
 # dummy function for class 'Cntlr.Init' to force arelle gui to reload
 def initFunc(cntlr, **kwargs):
@@ -123,6 +153,7 @@ __pluginInfo__ = {
     'author': 'Sherif ElGamal',
     'CntlrCmdLine.Options': arellepyCmdLineOptionExtender,
     'CntlrCmdLine.Utility.Run': utilityRun,
+    'CntlrCmdLine.Xbrl.Loaded': xbrlLoaded,
     'CntlrWinMain.Toolbar': arellepyToolBarExtender,
     'Cntlr.Init': initFunc
 
