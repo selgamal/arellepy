@@ -10,7 +10,7 @@ This plugin provides an entry point to Arelle from local Arelle source code or A
 * If using Arelle application, then copy to `~/Arelle/plugin/arellepy`
 
 A config file must be setup at `~/Arelle/arelle/plugin/arellepy/arellepyConfig.json` to tell the plugin which files to use as follows:
-```json
+```js
 {
    // at least one of "srcDir" or "appDir" is required 
     "srcDir": "/path/to/Arelle/local/repo", //This is the path to local copy of arelle repository (running from source)
