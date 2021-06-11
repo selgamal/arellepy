@@ -21,6 +21,7 @@ or from Arelle gui, import arellepy plugin and an icon will appear in the tool b
 """
 
 import sys, os, argparse, socket, logging, threading, gettext, datetime, json, urllib.request, urllib.error
+from arelle.CntlrWinTooltip import ToolTip
 pathToLocals = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'locals')
 
 from dateutil.relativedelta import relativedelta
@@ -57,7 +58,7 @@ def main():
                                     quiet=opts.args.quiet, debug=opts.args.debug, reloader=opts.args.reloader,
                                     port=opts.args.port)  
     x = viewer.startViewer()
-    print(x[1])
+    # print(x[1])
 
 class optionsHandler:
     def __init__(self):
@@ -365,6 +366,7 @@ def toolBarExtender(cntlr, toolbar):
     image = tkr.PhotoImage(file=image)
     cntlr.toolbar_images.append(image)
     tbControl = ttk.Button(toolbar, image=image, command= lambda: startEdgarViewer(cntlr,), style="Toolbutton", padding=toolbarButtonPadding)
+    ToolTip(tbControl, _('Launch Edgar reports viewer'))
     column, row = toolbar.grid_size()
     tbControl.grid(row=0, column=column)
 

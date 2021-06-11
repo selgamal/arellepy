@@ -7,6 +7,7 @@ from lxml import etree, html
 from urllib import request, parse
 from datetime import datetime
 from collections import OrderedDict
+import time
 
 
 
@@ -258,7 +259,7 @@ def arellepyConfig(parentDir):
                 '"srcDir" enter path to local clone of arelle git\n'
                 '"appDir" enter path to local installation of arelle\n'
                 '"env" which env to use src/app (if left empty and both app and src paths are entered app path will be used as default)\n'
-                'At least one valid "src" and "app" must be entered to be able to import arellepy')
+                'At least one valid "src" or "app" must be entered to be able to import arellepy')
 
     return config
 
@@ -382,25 +383,36 @@ def xmlFileFromString(xmlString, temp=True, filepath=None, filePrefix=None, iden
 def getExtractedXbrlInstance(url):
     '''Gets the url of extracted XBRL instance from the url of inlineXBRL form, used when XBRL instance is needed while inlineXBRL is reported'''
     _url = url.url if type(url).__name__ == 'ModelRssItem' else url
-    url = None
+    res_url = None
     # first guess url of extracted document
     url_i = os.path.splitext(_url)[0] + '_htm.xml'
-    test = request.urlopen(url_i)
-    if test.code == 200:
-        url = url_i
-    # if not found get it from index page
-    else:
-        # parse index page
-        index = url.find('link').text
-        page = request.urlopen(index)
-        tree = html.parse(page)
-        extractedPath = tree.xpath('.//table[contains(@summary, "Data Files")]//*[contains(text(), "EXTRACTED")]/ancestor::tr/td[3]//@href')[0]
-        # urlParts = parse.urlparse(index)
-        # extractedInstanceUrl = urlParts._replace(path= extractedPath).geturl()
-        extractedInstanceUrl = parse.urljoin(index, extractedPath)
-        test2 = request.urlopen(extractedInstanceUrl)
-        if test2.code == 200:
-            url = extractedInstanceUrl
-    return url
+    n = 0
+    while not res_url and n<=3:
+        try:
+            test = request.urlopen(url_i)
+            if test.code == 200:
+                res_url = url_i
+        except:
+            pass
+        time.sleep(1)
+   # if not found get it from index page
+    if not res_url:
+        try:
+            # parse index page
+            index = url.find('link').text
+            page = request.urlopen(index)
+            tree = html.parse(page)
+            extractedPath = tree.xpath('.//table[contains(@summary, "Data Files")]//*[contains(text(), "EXTRACTED")]/ancestor::tr/td[3]//@href')[0]
+            # urlParts = parse.urlparse(index)
+            # extractedInstanceUrl = urlParts._replace(path= extractedPath).geturl()
+            extractedInstanceUrl = parse.urljoin(index, extractedPath)
+            test2 = request.urlopen(extractedInstanceUrl)
+            # if test2.code == 200:
+            res_url = extractedInstanceUrl
+        except:
+            pass
+    if not res_url:
+        res_url = url_i
+    return res_url
         
 

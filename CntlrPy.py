@@ -5,13 +5,16 @@ defines class `CntlrPy` that can be used interactively in python, this is a conv
 command line options in an interactive environment such as jupyter notebook or python interactive interpeter.
 """
 
-import os, sys, datetime, json, gettext, logging, time, multiprocessing, shlex, traceback
+import os, sys, datetime, json, gettext, logging, time, multiprocessing, shlex, traceback, shutil
 from lxml import etree
 from collections import OrderedDict, defaultdict
 from urllib import request
 import arelle
-from arelle import (Cntlr, CntlrCmdLine, ModelManager, PluginManager, PackageManager,
+from arelle import (Cntlr, CntlrCmdLine, ModelManager, PluginManager, PackageManager, ModelXbrl,
                     ModelFormulaObject, XmlUtil)
+from arelle.FileSource import openFileSource 
+
+
 
 try:
     from .HelperFuncs import chkToList, xmlFileFromString, getExtractedXbrlInstance
@@ -19,9 +22,8 @@ try:
 except:
     from HelperFuncs import chkToList, xmlFileFromString, getExtractedXbrlInstance
     from OptionsHandler import OptionsHandler, RESERVED_KWARGS
-    
 
-print('FROZEN STAT:', getattr(sys, 'frozen', 'not frozen!'))
+# print('FROZEN STAT:', getattr(sys, 'frozen', 'not frozen!'))
 
 def arelleCmdLineRun(args, configDir=None):
     '''For launching gui from python script...for whatever reason'''
@@ -40,7 +42,7 @@ def arelleCmdLineRun(args, configDir=None):
     if configDir:
         if not os.path.isdir(configDir):
             os.mkdir(configDir)
-
+        os.environ['XDG_CONFIG_HOME'] = configDir
     addArgs = '{}--keepOpen'.format('--xdgConfigHome={} '.format(configDir if configDir else ''))
     allArgs =  addArgs + ' ' + args
     args = shlex.split(allArgs)
@@ -65,7 +67,8 @@ def arelleGuiLaunch(configDir=None):
         sys.argv.append('--xdgConfigHome={}'.format(configDir))
     
     CntlrWinMain.main()
-
+    
+    return
 
 def xResourcesDir():
     """resourcesDir overrides the function in Cntlr module that determines
@@ -436,8 +439,6 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             mX_info = None
         return mX_info
 
-
-
 class subProcessCntlrPy(CntlrPy):
     '''Helper to run in multiprocesses'''
     def __init__(self, instConfigDir, useResDir, hasGui=False, 
@@ -463,7 +464,6 @@ class subProcessCntlrPy(CntlrPy):
         else:
             # super().addToLog(message,messageCode,messageArgs,file, refs, level)
             pass
-
 
 def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     '''Creates Edegar report for SEC filings along with additional `additionalMeta.json` file (used by LocalViewerStandalone) 
@@ -496,6 +496,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     primeDoc = rssItem.primaryDocumentURL
     filingDate = str(rssItem.filingDate)
     entryPointUrl = getattr(rssItem, 'url', None)
+    errors  = []
 
     # Check if all required plugins exits
     requiredPlugins = ['validate/EFM','EdgarRenderer','transforms/SEC']
@@ -515,7 +516,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     if os.path.isdir(reportFolder):
         files = os.listdir(reportFolder)
         if all([x in files for x in ["FilingSummary.xml","additionalMeta.json"]]):
-            return reportFolder
+            return reportFolder, errors
     else:
         os.makedirs(reportFolder)
 
@@ -523,8 +524,28 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     # c = CntlrPy(instConfigDir=instConfigDir, useResDir=useResDir, logFileName=logFileName,  preloadPlugins=preloadPlugins)
     c = subProcessCntlrPy(instConfigDir=instConfigDir, useResDir=useResDir, logFileName=logFileName,  preloadPlugins=preloadPlugins, q=q)
     # Run arelle to create the Edgar report pack
-    c.runKwargs(file= entryPointUrl, logFile= logFileName, reports=reportFolder, 
-                disclosureSystem= 'efm', copyInlineFilesToOutput='')
+    retries =0
+    badURL = True
+    while badURL and retries <=3:
+        c.runKwargs(file= entryPointUrl, logFile= logFileName, reports=reportFolder, 
+                    disclosureSystem= 'efm-nonblocking', copyInlineFilesToOutput=True)
+        if 'FileNotLoadable' in c.modelManager.modelXbrl.errors:
+            c.modelManager.close()
+            badURL = True
+            if 'FileNotLoadable' not in errors:
+                errors.append('FileNotLoadable')
+            if os.path.exists(reportFolder) and os.path.isdir(reportFolder):
+                shutil.rmtree(reportFolder)
+            retries +=1
+            c.showStatus(_('Retrying to process {} after errors {}'.format(entryPointUrl, ','.join(errors)))) 
+        else:
+            badURL = False
+            errors = [] # clear errors
+
+    if badURL:
+        c.showStatus(_('{} not downloadable'.format(entryPointUrl)))
+        return reportFolder, errors
+
 
     # Create a jason file containing information needed to be passed on to javascript for the viewer
     dei_info = ['EntityRegistrantName', 
@@ -615,7 +636,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
         c.showStatus(msg)
         return
 
-    return reportFolder
+    return reportFolder, errors
 
 def renderEdgarReportsFromRssItems(mainCntlr, rssItems=None, saveToFolder=None, pluginsDirs=None):
     cntlr = mainCntlr
@@ -696,8 +717,10 @@ def extractFormulaOutput(modelXbrl, formulaId=None, filingId=None, inlineXbrl=0)
     assertionsRes = [{x.xlinkLabel: {'SatisfiedCount': x.countSatisfied, 'NotSatisfiedCount': x.countNotSatisfied}}
                      for x in mx.modelVariableSets if type(x) is ModelValueAssertion]
     # Get output string:
-    outputString = etree.tostring(mx.formulaOutputInstance.modelDocument.xmlRootElement).decode(
-        mx.formulaOutputInstance.modelDocument.xmlDocument.docinfo.encoding)
+    outputString = ''
+    if mx.formulaOutputInstance:
+        outputString = etree.tostring(mx.formulaOutputInstance.modelDocument.xmlRootElement).decode(
+            mx.formulaOutputInstance.modelDocument.xmlDocument.docinfo.encoding)
 
     # result:
     outputRes = {'filingId': filingId,
@@ -752,32 +775,48 @@ def makeFormulaDict(formulaString=None, formulaSourceFile=None, writeFormulaToSo
     return formulaDict
 
 def runFormulaHelper(argsDict, q):
+    res = False
     url = argsDict['url']
     b = CntlrPy(instConfigDir=argsDict['configDir'], useResDir=argsDict['resDir'], logFileName="logToBuffer")
-    try:
-        b.runKwargs(file= url[1], logFile= 'logToBuffer', validate=True, imports= argsDict['inputFile'], rssDBFormulaRemoveDups=True)
-        q.put(extractFormulaOutput(b.modelManager.modelXbrl, formulaId=argsDict['formulaId'], filingId=url[0], inlineXbrl=url[2] if url[2] else 0))
-    except Exception as e:
-        _msg = 'Something went wrong while processing {}:\n{}'.format(url[1], str(e)) 
-        errorResult = {'filingId': url[0],
-                      'formulaId': argsDict['formulaId'],
-                      'inlineXBRL': url[2] if url[2] else 0,
-                      'formulaOutput': '',
-                      'assertionsResults': '',
-                      'dateTimeProcessed': datetime.datetime.now().replace(microsecond=0),
-                      'processingLog': _msg,
-                      'errors': _msg}
-        b.showStatus(_msg)
-        b.modelManager.close()
-        b.close()
-        q.put(errorResult)
-        return None
-    
+    n=0
+    badUrl = True
+    errors = set()
+    while badUrl and n<=3:
+        errorResult=None
+        try:
+            b.runKwargs(file= url[1], logFile= 'logToBuffer', validate=True, imports= argsDict['inputFile'], rssDBFormulaRemoveDups=True, plugins='-Edgar Renderer')
+        except Exception as e:
+            _msg = 'Something went wrong while processing {}:\n{}'.format(url[1], str(e)) 
+            errorResult = {'filingId': url[0],
+                        'formulaId': argsDict['formulaId'],
+                        'inlineXBRL': url[2] if url[2] else 0,
+                        'formulaOutput': '',
+                        'assertionsResults': '',
+                        'dateTimeProcessed': datetime.datetime.now().replace(microsecond=0),
+                        'processingLog': _msg,
+                        'errors': _msg}
+            b.showStatus(_msg)
+            b.modelManager.close()
+            res = False
+        if n == 3 and errorResult:
+            q.put(errorResult)
+        if 'FileNotLoadable' in b.modelManager.modelXbrl.errors:
+            res= False
+            badUrl = True
+            n +=1
+            for e in b.modelManager.modelXbrl.errors:
+                errors.add(e)
+            b.modelManager.close()
+            b.showStatus(_('Retrying to process {} after errors {}'.format(url[1], ','.join(errors))))
+        else:
+            res = True
+            badUrl = False
+            q.put(extractFormulaOutput(b.modelManager.modelXbrl, formulaId=argsDict['formulaId'], filingId=url[0], inlineXbrl=url[2] if url[2] else 0))
     b.modelManager.close()
     b.close()
-    return None
+    return res
 
-def runFormulaFromDBonRssItems(conn, rssItems, formulaId, insertResultIntoDb=False, updateExistingResults=False, saveResultsToFolder=False, folderPath=None, returnResults=True):
+def runFormulaFromDBonRssItems(conn, rssItems, formulaId, additionalImports=None, insertResultIntoDb=False, updateExistingResults=False, saveResultsToFolder=False, folderPath=None, returnResults=True):
     '''Runs formula with id `formulaId` on selected rssItems
     
     rssItems are checked against db formulaeResults table to see if an entry exist for the same formula applied to those filings, if `updateExistingResults` is set
@@ -845,6 +884,9 @@ def runFormulaFromDBonRssItems(conn, rssItems, formulaId, insertResultIntoDb=Fal
         
         inputRes = makeFormulaDict(formulaString=formulaDict.get('formulaLinkbase', None), formulaSourceFile=formulaDict.get('fileName', None), 
                                     writeFormulaToSourceFile=False, formulaId=formulaDict.get('formulaId', None), tempDir=conn.cntlr.userAppTempDir)
+        if inputRes['inputFile']:
+            inputRes['inputFile'] = inputRes['inputFile'] + '|' + additionalImports if additionalImports else ''
+
 
         _urls =  chkToList(urls, tuple, lambda x: len(x)==4)
 

@@ -1,16 +1,15 @@
 '''Use arelle from python script
-
 This plugin provides class CntlrPy, that can be used from python code, it mimics exactly
 using CntlrCmdLine.
 
 Eventhough there is a python API documented on arelle.org using the Cntlr class, but it is
 sometimes difficult to get the same exact results achieved by using CntlrCmdLine. This plugin
-and CntlrPy just makes it easier to use the same options from CntlrCmdLine but withing python
-code or even interactive environment, it translates the run options and pass them through to
-CntlrCmdLine and keeps it open for further processing as needed.
+and CntlrPy just makes it easier to use the same options from CntlrCmdLine but within python
+code or interactive environment, it translates the run options and pass them through to
+CntlrCmdLine and keeps it open for further processing and inspection as needed.
 
 This plugin provides a local viewer that can view multiple Edgar reports rendered by the 
-EdgarRenderer plugin in the same viewer, just a convenience. The only caveat is that the reports
+EdgarRenderer plugin in the same viewer as a convenience. The only caveat is that the reports
 must be rendered from this plugin, the renedering is done normally via EdgarRenderer, but a 
 metadata file is added to make the viewer work.
 
@@ -89,7 +88,7 @@ def arellepyCmdLineOptionExtender(parser, *args, **kwargs):
     
 
 def utilityRun(cntlr, options, **kwargs):
-    print('arellepy utility run now!!')
+    # print('arellepy utility run now!!')
     if options.arellepyRunFormula:
         if options.arellepyRunFormulaFromDB:
             cntlr.addToLog(_('Only one of  "--arellepyRunFormulaFromDB" or "--arellepyRunFormula" can be chosen'),
@@ -97,6 +96,7 @@ def utilityRun(cntlr, options, **kwargs):
             raise Exception(_('Only one of  "--arellepyRunFormulaFromDB" or "--arellepyRunFormula" can be chosen'))
 
 def getDups(mx, cntlr):
+    '''Detect duplicate facts ids in inline filings, duplicates facts are facts with lesser precision'''
     from arelle.ModelValue import qname
     from arelle.ValidateXbrlCalcs import inferredPrecision
     dupIds = set()
@@ -127,14 +127,16 @@ def xbrlLoaded(cntlr, options, modelXbrl, *args, **kwargs):
     getDups(mx=modelXbrl, cntlr=cntlr)
 
 
-# dummy function for class 'Cntlr.Init' to force arelle gui to reload
+
 def initFunc(cntlr, **kwargs):
-    print('arellepy init run now!!')
+    # print('arellepy init run now!!')
+    # Add temps folder to config dir
     if not hasattr(cntlr, 'userAppTempDir'):
         cntlr.userAppTempDir = os.path.join(cntlr.userAppDir, 'temps')
         if not os.path.exists(cntlr.userAppTempDir):
             os.mkdir(cntlr.userAppTempDir)
-
+    
+    # clean up temp files on exit
     def cleanTemps(dir):
         #clean up
         for f in os.listdir(dir):
