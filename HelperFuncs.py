@@ -382,6 +382,9 @@ def xmlFileFromString(xmlString, temp=True, filepath=None, filePrefix=None, iden
         
 def getExtractedXbrlInstance(url):
     '''Gets the url of extracted XBRL instance from the url of inlineXBRL form, used when XBRL instance is needed while inlineXBRL is reported'''
+    from arelle import Cntlr
+    c = Cntlr.Cntlr()
+    webcache = c.webCache
     _url = url.url if type(url).__name__ == 'ModelRssItem' else url
     res_url = None
     # first guess url of extracted document
@@ -389,7 +392,7 @@ def getExtractedXbrlInstance(url):
     n = 0
     while not res_url and n<=3:
         try:
-            test = request.urlopen(url_i)
+            test = webcache.opener.open(url_i)
             if test.code == 200:
                 res_url = url_i
         except:
@@ -399,7 +402,7 @@ def getExtractedXbrlInstance(url):
     if not res_url:
         try:
             # parse index page
-            index = url.find('link').text
+            index = url.find('link').text # assumes modelRssItem
             page = request.urlopen(index)
             tree = html.parse(page)
             extractedPath = tree.xpath('.//table[contains(@summary, "Data Files")]//*[contains(text(), "EXTRACTED")]/ancestor::tr/td[3]//@href')[0]

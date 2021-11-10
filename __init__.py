@@ -99,28 +99,31 @@ def getDups(mx, cntlr):
     '''Detect duplicate facts ids in inline filings, duplicates facts are facts with lesser precision'''
     from arelle.ModelValue import qname
     from arelle.ValidateXbrlCalcs import inferredPrecision
-    dupIds = set()
+    dupIndexes = set()
     processedFactsSet = set()
     if not getattr(mx, 'facts', False):
         return
     l1 =  mx.facts
     for f1 in l1:
-        if f1.id in dupIds or f1.id in processedFactsSet:
+        if f1.objectIndex in dupIndexes or f1.objectIndex in processedFactsSet:
             continue
         else:
-            dups = [f2 for f2 in l1 if f2.isDuplicateOf(f1)]
+            dups = [f2 for f2 in mx.factsByQname[f1.qname] if f2.isDuplicateOf(f1)]
             if len(dups)>0:
                 dups.append(f1) # to compare to duplicates and get the most precise
-                dups.sort(key=lambda x: inferredPrecision(x), reverse=True)
+                if f1.isNumeric:
+                    dups.sort(key=lambda x: inferredPrecision(x), reverse=True)
+                else:
+                    dups.sort(key=lambda x: x.objectIndex, reverse=False)
                 most_precise = dups.pop(0)
-                processedFactsSet.add(most_precise.id)
+                processedFactsSet.add(most_precise.objectIndex)
                 for dupF in dups:
-                    dupIds.add(dupF.id)
+                    dupIndexes.add(dupF.objectIndex)
             else:
-                processedFactsSet.add(f1)
-    mx.modelManager.showStatus(_(f'Found {len(dupIds)} duplicate Facts'))
-    mx.dupFactsIds = dupIds
-    cntlr.modelManager.formulaOptions.parameterValues[qname('param_DUPs_IDs')] = (None, dupIds) #(None,'|'.join(dupIds))
+                processedFactsSet.add(f1.objectIndex)
+    mx.modelManager.showStatus(_(f'Found {len(dupIndexes)} duplicate Facts'))
+    mx.dupFactsIndexes = dupIndexes
+    # cntlr.modelManager.formulaOptions.parameterValues[qname('param_DUPs_IDs')] = (None, dupIds) #(None,'|'.join(dupIds))
 
 
 def xbrlLoaded(cntlr, options, modelXbrl, *args, **kwargs):
