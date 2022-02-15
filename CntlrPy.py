@@ -49,7 +49,7 @@ def arelleCmdLineRun(args, configDir=None):
     gettext.install("arelle")
     c = CntlrCmdLine.parseAndRun(args)
     return c
-    
+
 
 
 def arelleGuiLaunch(configDir=None):
@@ -65,9 +65,9 @@ def arelleGuiLaunch(configDir=None):
         if not os.path.isdir(configDir):
             os.mkdir(configDir)
         sys.argv.append('--xdgConfigHome={}'.format(configDir))
-    
+
     CntlrWinMain.main()
-    
+
     return
 
 def xResourcesDir():
@@ -125,21 +125,26 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             )
     """
 
-    def __init__(self, instConfigDir, useResDir=None, hasGui=False, 
+    def __init__(self, instConfigDir=None, useResDir=None, hasGui=False, 
                  logFileName=None, logFileMode=None, logFileEncoding=None, logFormat=None, logLevel=None,
                  logHandler=None, logToBuffer=False, logTextMaxLength=None, logRefObjectProperties=True,
-                 loadPlugins=False, loadPackages=False, preloadPlugins=None):
+                 loadPlugins=False, loadPackages=False, preloadPlugins=None, recheckInterval = 'weekly'):
         # Make sure ConfigDir is created
         self.parsedOpts = None
-        try:    
-            os.makedirs(instConfigDir)
-            self.showStatus("Creating Configration Dir at '{}'".format(instConfigDir))
-        except FileExistsError:
-            self.showStatus("Using Existing ConfigDir at '{}'".format(instConfigDir))
-
+        recheck_interval = {"daily": 1.0, "weekly": 7.0,
+                    "monthly": 30.0, "never": float('inf')
+                    }.get(recheckInterval, 7.0) * (60.0 * 60.0 * 24.0)
+        
         # Pass instConfigDir to environment variable to be use by Cntlr in
         # locating configration Dir
-        os.environ["XDG_CONFIG_HOME"] = instConfigDir
+        if instConfigDir:
+            try:
+                os.makedirs(instConfigDir)
+                self.showStatus("Creating Configration Dir at '{}'".format(instConfigDir))
+            except FileExistsError:
+                self.showStatus("Using Existing ConfigDir at '{}'".format(instConfigDir))
+
+            os.environ["XDG_CONFIG_HOME"] = instConfigDir
 
         # Make sure resources dir is selected and assigned to env variable
         # to be used by resourcesDir() in setting resources
@@ -155,7 +160,7 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             Cntlr.resourcesDir = lambda: os.environ["XDG_ARELLE_RESOURCES_DIR"]
 
         super().__init__(logFileName=logFileName)
-        
+
         # dir for temporary files generated
         self.userAppTempDir = os.path.join(self.userAppDir, 'temps')
         if not os.path.exists(self.userAppTempDir):
@@ -189,7 +194,10 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         self.modelManager.loadCustomTransforms()
 
         # initialize options handler
-        self.OptionsHandler = OptionsHandler(self, preloadPlugins=preloadPlugins) 
+        self.OptionsHandler = OptionsHandler(self, preloadPlugins=preloadPlugins)
+
+        # webcache recheck
+        self.webCache.maxAgeSeconds = recheck_interval
 
     # Show stats to keep me entertained while it does its thing
     def showStatus(self, message, clearAfter=None, end='\n'):
@@ -209,6 +217,13 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             )
         see CntlrPy.OptionsHandler.dictOptsBySrc() for available options.
         """
+        # Check if there is UI language override to use the selected language
+        # for help and error messages...
+        for _arg, _val in optsDict.items():
+            if _arg.startswith('--uiLang'):
+                _uiLang = _val
+                self.setUiLanguage(_uiLang)
+                break
         opts = self.OptionsHandler.parseOpts(argsDict=optsDict)
         gettext.install('arelle')
         self.run(opts)
@@ -217,6 +232,14 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         global RESERVED_KWARGS
         # Deal with reserved python key words (import for importFiles)
         reserved = {v:k for k,v in RESERVED_KWARGS.items()}
+
+        # Check if there is UI language override to use the selected language
+        # for help and error messages...
+        for _arg, _val in kwargs.items():
+            if _arg.startswith('--uiLang'):
+                _uiLang = _val
+                self.setUiLanguage(_uiLang)
+                break
 
         # deal with store_true/false
         _kwargs = dict()
@@ -268,6 +291,13 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         see CntlrPy.OptionsHandler.dictOptsBySrc() for available options.
         for `import` keyword (files to import to the DTS) use `imports`
         """
+        # Check if there is UI language override to use the selected language
+        # for help and error messages...
+        for _arg, _val in kwargs.items():
+            if _arg.startswith('--uiLang'):
+                _uiLang = _val
+                self.setUiLanguage(_uiLang)
+                break
         # Deal with reserved python key words (import for importFiles)
         reserved = {v:k for k,v in RESERVED_KWARGS.items()}
 
@@ -327,11 +357,14 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         if saveConfig:
             self.saveConfig()
         if closeLogger:
-            if self.logger is not None:
-                try:
-                    self.logHandler.close()
-                except Exception: # fails on some earlier pythons (3.1)
-                    pass
+            for handler in logging.getLogger("arelle").handlers:
+                handler.flush()
+                handler.close()
+            # if self.logger is not None:
+            #     try:
+            #         self.logHandler.close()
+            #     except Exception: # fails on some earlier pythons (3.1)
+            #         pass
    
 
 

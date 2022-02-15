@@ -268,7 +268,7 @@ def selectRunEnv(env, workingDir=None, appDir=None, srcDir=None):
     """Conveniently sets environment variables based on whether runing from app or source.
 
     The is function makes the appropriate changes to cwd and path for runing from installed
-    arelle app or src, in case of app it tries to memic app environment, usually using py35embd
+    arelle app or src, in case of app it tries to mimic app environment, usually using py35embd
     and only installed app's frozen libs are used except sys and os. it makes the necessary changes
     to path, cwd to run code from source or installed arelle app.
 
@@ -281,7 +281,7 @@ def selectRunEnv(env, workingDir=None, appDir=None, srcDir=None):
         srcDir {[type]} -- path to source dir (default: {None})
 
     Returns:
-        A string representing the path for the resouces dir used by the Cntlr
+        A string representing the path for the resources dir used by the Cntlr
 
     Raises:
         Exception: when nothing is selected
@@ -380,10 +380,12 @@ def xmlFileFromString(xmlString, temp=True, filepath=None, filePrefix=None, iden
     return fileHandle
 
         
-def getExtractedXbrlInstance(url):
+def getExtractedXbrlInstance(url, cntlr=None):
     '''Gets the url of extracted XBRL instance from the url of inlineXBRL form, used when XBRL instance is needed while inlineXBRL is reported'''
-    from arelle import Cntlr
-    c = Cntlr.Cntlr()
+    c = cntlr
+    if c is None:
+        from arelle import Cntlr
+        c = Cntlr.Cntlr()
     webcache = c.webCache
     _url = url.url if type(url).__name__ == 'ModelRssItem' else url
     res_url = None

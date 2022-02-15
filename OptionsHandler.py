@@ -413,6 +413,8 @@ class OptionsHandler:
         parser.add_option("--uiLang", action="store", dest="uiLang",
                         help=_("Language for user interface (override system settings, such as program messages).  Does not save setting."))
         parser.add_option("--uilang", action="store", dest="uiLang", help=SUPPRESS_HELP)
+        parser.add_option("--disableRtl", action="store_true", dest="disableRtl", default=False,
+                        help=_("Flag to disable reversing string read order for right to left languages, useful for some locale settings")) 
         parser.add_option("--proxy", action="store", dest="proxy",
                         help=_("Modify and re-save proxy settings configuration.  " 
                                 "Enter 'system' to use system proxy setting, 'none' to use no proxy, "
@@ -425,7 +427,7 @@ class OptionsHandler:
         parser.add_option("--internetTimeout", type="int", dest="internetTimeout", 
                         help=_("Specify internet connection timeout in seconds (0 means unlimited)."))
         parser.add_option("--internettimeout", type="int", action="store", dest="internetTimeout", help=SUPPRESS_HELP)
-        parser.add_option("--internetRecheck", choices=("weekly", "daily", "never"), action="store", dest="internetRecheck", 
+        parser.add_option("--internetRecheck", choices=("monthly","weekly", "daily", "never"), action="store", dest="internetRecheck", 
                         help=_("Specify rechecking cache files (weekly is default)"))
         parser.add_option("--internetrecheck", choices=("weekly", "daily", "never"), action="store", dest="internetRecheck", help=SUPPRESS_HELP)
         parser.add_option("--internetLogDownloads", action="store_true", dest="internetLogDownloads", 
@@ -533,7 +535,7 @@ class OptionsHandler:
                 _kw = "--" + k.replace('_', '-')
                 args.append(_kw)
                 if v:
-                    args.append(v)            
+                    args.append(v)
 
         # print(args)
 
@@ -637,12 +639,15 @@ class OptionsHandler:
                             logToBuffer=getattr(options, "logToBuffer", False),
                             logTextMaxLength=options.logTextMaxLength, # e.g., used by EdgarRenderer to require buffered logging
                             logRefObjectProperties=options.logRefObjectProperties)
-        
+
         # prevents duplicating log print on re-runs
         _logger = logging.getLogger('arelle')
         for x in _logger.handlers:
             if type(x).__name__ == 'LogToPrintHandler' and not x is cntlr.logHandler:
                 _logger.removeHandler(x)
             # cntlr.run(options)
-        cntlr.parsedOpts = options    
+
+        # not utilized in source code
+        cntlr.webCache.recheck = options.internetRecheck if options.internetRecheck else 'weekly'
+        cntlr.parsedOpts = options
         return options
