@@ -82,7 +82,8 @@ class DuplicateFacts:
                                     f'inconsistent duplicate set(s) (including {self.inconsistent_dup_facts_count} facts)')
         # mx.modelManager.showStatus(stats_msg)
         modelXbrl.dupFactsIndexes = self.dupFactsIndexes
-        cntlr.addToLog(stats_msg, file=modelXbrl.uri, messageCode="info", level=logging.INFO)
+        if modelXbrl is not None and modelXbrl.factsInInstance:
+            cntlr.addToLog(stats_msg, file=modelXbrl.uri, messageCode="info", level=logging.INFO)
         
     def _getDups(self, mx, cntlr):
         '''Detect duplicate facts ids in inline filings, duplicates facts are facts with lesser precision'''
@@ -224,13 +225,12 @@ def filingEnd(cntlr, options, filesource, _entrypointFiles, *args, **kwargs):
     global memory_used_global, time_start_global
     modelXbrl = cntlr.modelManager.modelXbrl
     startedAt = time.time()
-    if modelXbrl is not None and modelXbrl.factsInInstance:
-        modelXbrl.duplicateFactsInfo = DuplicateFacts(modelXbrl, cntlr)
-        modelXbrl.profileStat(("arellepy: detect-duplicates"), time.time() - startedAt)
-        modelXbrl.memory_change = cntlr.memoryUsed - memory_used_global
-        modelXbrl.load_end_time = time.time() 
-        modelXbrl.load_start_time = time_start_global
-        modelXbrl.time_to_load = modelXbrl.load_end_time - modelXbrl.load_start_time # profile stat capture load time also, this provides useful datetime for start/end
+    modelXbrl.duplicateFactsInfo = DuplicateFacts(modelXbrl, cntlr)
+    modelXbrl.profileStat(("arellepy: detect-duplicates"), time.time() - startedAt)
+    modelXbrl.memory_change = cntlr.memoryUsed - memory_used_global
+    modelXbrl.load_end_time = time.time() 
+    modelXbrl.load_start_time = time_start_global
+    modelXbrl.time_to_load = modelXbrl.load_end_time - modelXbrl.load_start_time # profile stat capture load time also, this provides useful datetime for start/end
 
 def filingStart(cntlr, options, *args, **kwargs):
     global memory_used_global, time_start_global
