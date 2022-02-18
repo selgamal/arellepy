@@ -48,7 +48,7 @@ class DuplicateFacts:
         self.dup_facts_sets_by_hash = dict()
         self.dup_facts_sets_by_key = dict() # (dup_set_hash, is_inconsistent_dup_set, most_precise_fact)
         self.most_precise_dup_facts_set = set()
-        
+
         self._getDups(modelXbrl, cntlr)
 
         self.dupFactsIndexes = {f.objectIndex for f_set in self.dup_facts_sets_by_hash.values() for f in f_set if not f in self.most_precise_dup_facts_set} # does not include most precise
@@ -57,7 +57,7 @@ class DuplicateFacts:
         self.consistent_dup_facts_sets_indexes = [{f.objectIndex for f in f_set} for k, f_set in self.dup_facts_sets_by_key.items() if not k[1]]
         self.inconsistent_dup_facts_sets_indexes = [{f.objectIndex for f in f_set} for k, f_set in self.dup_facts_sets_by_key.items() if k[1]]
         self.most_precise_dup_facts_set_indexes = {x.objectIndex for x in self.most_precise_dup_facts_set}
-        
+
         self.all_dup_facts_sets_count = len(self.dup_facts_sets_by_hash) \
                                                 if not self.dup_facts_sets_by_hash is None else 0
 
@@ -66,7 +66,7 @@ class DuplicateFacts:
 
         self.inconsistent_dup_facts_sets_count = len(self.inconsistent_dup_facts_sets_indexes) \
                                                 if not self.inconsistent_dup_facts_sets_indexes is None else 0
-                                                
+
         self.inconsistent_dup_facts_count = sum([len(x) for x in self.inconsistent_dup_facts_sets_indexes]) \
                                                 if not self.inconsistent_dup_facts_sets_indexes is None else 0
 
@@ -75,16 +75,16 @@ class DuplicateFacts:
 
         self.consistent_dup_facts_count = sum([len(x) for x in self.consistent_dup_facts_sets_indexes]) \
                                                 if not self.consistent_dup_facts_sets_indexes is None else 0
-        
+
         stats_msg = _(f'Found {self.all_dup_facts_sets_count} '
                                     f'duplicate facts set(s) (including {self.all_dup_facts_count} fact(s)), '
                                     f'with {self.inconsistent_dup_facts_count} '
                                     f'inconsistent duplicate set(s) (including {self.inconsistent_dup_facts_count} facts)')
         # mx.modelManager.showStatus(stats_msg)
         modelXbrl.dupFactsIndexes = self.dupFactsIndexes
-        if modelXbrl is not None and modelXbrl.factsInInstance:
+        if modelXbrl is not None and len(getattr(modelXbrl, 'factsInInstance', [])) > 0:
             cntlr.addToLog(stats_msg, file=modelXbrl.uri, messageCode="info", level=logging.INFO)
-        
+
     def _getDups(self, mx, cntlr):
         '''Detect duplicate facts ids in inline filings, duplicates facts are facts with lesser precision'''
         from arelle.ModelValue import qname
@@ -96,7 +96,8 @@ class DuplicateFacts:
         dup_facts_sets_by_hash = {}
         dup_facts_sets_by_key = {} # (dup_set_hash, is_inconsistent_dup_set, most_precise_fact)
 
-        if not getattr(mx, 'factsInInstance', False):
+        # detect duplicates if we have facts.
+        if not len(getattr(mx, 'factsInInstance', [])) > 0:
             return
 
         l1 =  mx.factsInInstance
@@ -104,7 +105,7 @@ class DuplicateFacts:
             # if _f.xValid == 0:
             #     cntlr.showStatus(f'Invalid before dups check: {_f}')
             factForConceptContextUnitHash[_f.conceptContextUnitHash].append(_f)
-        
+
         for dup_set_hash, dups in factForConceptContextUnitHash.items():
             if len(dups)>1:
                 x_valid_state = {fct:fct.xValid for fct in dups}
@@ -120,7 +121,7 @@ class DuplicateFacts:
                 for fct in dups:
                     if fct.xValid != x_valid_state[fct]:
                         xValidator(mx, fct, ixFacts=isinstance(fct, ModelInlineFact))
-                
+
         self.dup_facts_sets_by_hash = dup_facts_sets_by_hash
         self.dup_facts_sets_by_key = dup_facts_sets_by_key
         self.most_precise_dup_facts_set = most_precise_facts_set
@@ -236,7 +237,7 @@ def filingStart(cntlr, options, *args, **kwargs):
     global memory_used_global, time_start_global
     memory_used_global = cntlr.memoryUsed
     time_start_global = time.time()
-    
+
 
 def initFunc(cntlr, **kwargs):
     # print('arellepy init run now!!')
