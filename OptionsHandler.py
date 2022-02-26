@@ -648,6 +648,6 @@ class OptionsHandler:
             # cntlr.run(options)
 
         # not utilized in source code
-        cntlr.webCache.recheck = options.internetRecheck if options.internetRecheck else 'weekly'
+        # cntlr.webCache.recheck = options.internetRecheck if options.internetRecheck else 'weekly'
         cntlr.parsedOpts = options
         return options

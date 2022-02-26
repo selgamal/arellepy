@@ -12,7 +12,7 @@ from urllib import request
 import arelle
 from arelle import (Cntlr, CntlrCmdLine, ModelManager, PluginManager, PackageManager, ModelXbrl,
                     ModelFormulaObject, XmlUtil)
-from arelle.FileSource import openFileSource 
+from arelle.FileSource import openFileSource
 
 
 
@@ -105,7 +105,7 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         useResDir -- absolute path to arelle library in Arelle installation (~/Arelle/arelle)
         preloadPlugins --  '|' separated string for the names of plugins (example: 'transforms/SEC|validate/EFM') 
                             to preload in order to have there options available when running (see below)
-    
+
     Rest of the arguments are exactly like arelle Cntlr.
     Command line flags (True/False arguments) can be flaged by supplying an empty text for example (validate="") to
     set the validate flag to True.
@@ -125,16 +125,15 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             )
     """
 
-    def __init__(self, instConfigDir=None, useResDir=None, hasGui=False, 
+    def __init__(self, instConfigDir=None, useResDir=None, hasGui=False,
                  logFileName=None, logFileMode=None, logFileEncoding=None, logFormat=None, logLevel=None,
                  logHandler=None, logToBuffer=False, logTextMaxLength=None, logRefObjectProperties=True,
-                 loadPlugins=False, loadPackages=False, preloadPlugins=None, recheckInterval = 'weekly'):
+                 loadPlugins=False, loadPackages=False, preloadPlugins=None, recheckInterval = 'weekly', shutup=True):
+        # setting for showStatus
+        self._shutup = shutup
         # Make sure ConfigDir is created
         self.parsedOpts = None
-        recheck_interval = {"daily": 1.0, "weekly": 7.0,
-                    "monthly": 30.0, "never": float('inf')
-                    }.get(recheckInterval, 7.0) * (60.0 * 60.0 * 24.0)
-        
+
         # Pass instConfigDir to environment variable to be use by Cntlr in
         # locating configration Dir
         if instConfigDir:
@@ -184,8 +183,8 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
 
         self.startLogging(logFileName=logFileName, logFileMode=logFileMode,
                           logFileEncoding=logFileEncoding, logFormat=logFormat,
-                          logLevel=logLevel, logHandler=logHandler, logToBuffer=logToBuffer, 
-                          logTextMaxLength=logTextMaxLength, logRefObjectProperties=logRefObjectProperties 
+                          logLevel=logLevel, logHandler=logHandler, logToBuffer=logToBuffer,
+                          logTextMaxLength=logTextMaxLength, logRefObjectProperties=logRefObjectProperties
                           )
         # Cntlr.Init after logging started
         # for pluginMethod in PluginManager.pluginClassMethods("Cntlr.Init"):
@@ -196,13 +195,11 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
         # initialize options handler
         self.OptionsHandler = OptionsHandler(self, preloadPlugins=preloadPlugins)
 
-        # webcache recheck
-        self.webCache.maxAgeSeconds = recheck_interval
-
     # Show stats to keep me entertained while it does its thing
     def showStatus(self, message, clearAfter=None, end='\n'):
         """Doc"""
-        print(message, end=end)
+        if not self._shutup:
+            print(message, end=end)
 
     def runOpts(self, optsDict):
         """Runs arguments supplied as key, value dict.
@@ -276,7 +273,7 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
                 if v:
                     args.append(v) 
 
-        
+
         return args
 
 
@@ -338,9 +335,9 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
 
     def close(self, saveConfig=False, savePlugins=False, savePackages=False, closeLogger=False):
         """Changes cntlr.close() to have more control on what to be save on exit
-        
+
         Closes the controller and its logger, optionally saving the user preferences configuration
-           
+
            :param saveConfig: save the user preferences configuration
            :type saveConfig: bool
 
@@ -365,7 +362,7 @@ class CntlrPy(CntlrCmdLine.CntlrCmdLine):
             #         self.logHandler.close()
             #     except Exception: # fails on some earlier pythons (3.1)
             #         pass
-   
+
 
 
     # Helper methods to identify loaded ModelXbrl -- probably useless
@@ -483,14 +480,14 @@ class subProcessCntlrPy(CntlrPy):
                          logFileName=logFileName, logFileMode=logFileMode, logFileEncoding=logFileEncoding, logFormat=logFormat, logLevel=logLevel,
                          logHandler=logHandler, logToBuffer=logToBuffer, logTextMaxLength=logTextMaxLength, logRefObjectProperties=logRefObjectProperties,
                          loadPlugins=loadPlugins, loadPackages=loadPackages, preloadPlugins=preloadPlugins)
-    
+
     def showStatus(self, message, clearAfter=None):
         if self.uiQueue:
             self.uiQueue.put(('showStatus', [message, clearAfter]))
-        else: 
+        else:
             # super().showStatus(message, clearAfter)
             print(message)
-    
+
     def addToLog(self, message, messageCode="arellepy.Info", messageArgs=None,  file="", refs=[],  level=logging.INFO):
         if self.uiQueue:
             self.uiQueue.put(('addToLog', [message, messageCode, messageArgs, file, refs, level]))
@@ -501,7 +498,7 @@ class subProcessCntlrPy(CntlrPy):
 def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     '''Creates Edegar report for SEC filings along with additional `additionalMeta.json` file (used by LocalViewerStandalone) 
     and saves output to selected folder, modelRssItem is meant to be the starting point of this process.
-    args:  
+    args:
         rssItem: modelRssItem
         saveToFolderPath: save rendered report to which folder (a sub folder will be created for the current instance)
         plugins: list of absolute paths to required plugins 'validate/EFM', 'EdgarRenderer','transforms/SEC'. None if using default plugins location of Arelle installation,
@@ -518,7 +515,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     inlineAttrib = rssItem.xpath('.//@*[local-name()="inlineXBRL"]')
     if inlineAttrib:
         isInlineXbrl = inlineAttrib[0]
-        if isinstance(isInlineXbrl, str):        
+        if isinstance(isInlineXbrl, str):
             if 't' in isInlineXbrl.lower():
                 inlineXbrl = 1
             else:
@@ -537,15 +534,15 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
         requiredPlugins = plugins
 
     chkPlugins = [os.path.isdir(x) if os.path.isabs(x) else os.path.isdir(os.path.join(useResDir, 'plugin', x)) for x in requiredPlugins]
-    
+
     if not all(chkPlugins):
         raise Exception(_('Cannot find required plugin(s) {}'.format(', '.join([x for x,y in zip(requiredPlugins, chkPlugins) if not y]))))
-    
+
     preloadPlugins = '|'.join(requiredPlugins)
-    
+
     # create subfolder for the report
     reportFolder = os.path.join(saveToFolderPath, os.path.basename(entryPointUrl).replace('.', '_'))
- 
+
     if os.path.isdir(reportFolder):
         files = os.listdir(reportFolder)
         if all([x in files for x in ["FilingSummary.xml","additionalMeta.json"]]):
@@ -581,14 +578,14 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
 
 
     # Create a jason file containing information needed to be passed on to javascript for the viewer
-    dei_info = ['EntityRegistrantName', 
+    dei_info = ['EntityRegistrantName',
                 'EntityCentralIndexKey',
-                'TradingSymbol', 
-                'DocumentType', 
+                'TradingSymbol',
+                'DocumentType',
                 'CurrentFiscalYearEndDate',
-                'DocumentPeriodEndDate', 
+                'DocumentPeriodEndDate',
                 'DocumentFiscalPeriodFocus',
-                'DocumentFiscalYearFocus', 
+                'DocumentFiscalYearFocus',
                 'DocumentEffectiveDate']
 
     mX = c.modelManager.modelXbrl
@@ -624,7 +621,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     yearFocus = summary_dict['DocumentFiscalYearFocus'][1]
     docDate = "{} {}{}{}{}{}".format(str(yearEnd), " (" if any([prdFocus, yearFocus]) else "",
                                 prdFocus, "-" if all([prdFocus, yearFocus]) else "", yearFocus,
-                                ")" if any([prdFocus, yearFocus]) else "" 
+                                ")" if any([prdFocus, yearFocus]) else ""
                                 )
     card_dict["card-docEndDate"] = ["Report Date", docDate]
     card_dict["card-fyEnd"] = summary_dict['CurrentFiscalYearEndDate']
@@ -660,7 +657,7 @@ def renderEdgarReports(rssItem, saveToFolderPath, plugins=None, q=None):
     # make sure report in created
     url = "FilingSummary.xml"
     if os.path.exists(os.path.join(reportFolder, url)):
-        # save additional meta 
+        # save additional meta
         with open(os.path.join(reportFolder, 'additionalMeta.json'), 'w') as jF:
             json.dump(card_dict, jF)
     else:
@@ -701,7 +698,7 @@ def renderEdgarReportsFromRssItems(mainCntlr, rssItems=None, saveToFolder=None, 
             return
     endTime = time.perf_counter()
     cntlr.addToLog(_('Done with Rendering {} reports in {} secs').format(n,round(endTime-startTime,3)), messageCode="arellepy.Info", level=logging.INFO)
-    
+
     return saveToFolder
 
 def removeDuplicatesFromXmlDocument(modelXbrl):
@@ -786,7 +783,7 @@ def makeFormulaDict(formulaString=None, formulaSourceFile=None, writeFormulaToSo
 
     if writeFormulaToSourceFile and formulaString and formulaSourceFile is None:
         raise Exception(_('No file provided to write formula'))
-    
+
     inputFile = None
     if formulaString is None and formulaSourceFile:
         inputFile = formulaSourceFile
@@ -802,7 +799,7 @@ def makeFormulaDict(formulaString=None, formulaSourceFile=None, writeFormulaToSo
 
     if not formulaSourceFile:
         formulaSourceFile = inputFile
-    
+
     formulaDict = {'formulaId': formulaId, 'fileName':formulaSourceFile, 'formulaLinkbase': formulaString, 'inputFile':inputFile}
 
     return formulaDict
@@ -851,15 +848,15 @@ def runFormulaHelper(argsDict, q):
 
 def runFormulaFromDBonRssItems(conn, rssItems, formulaId, additionalImports=None, insertResultIntoDb=False, updateExistingResults=False, saveResultsToFolder=False, folderPath=None, returnResults=True):
     '''Runs formula with id `formulaId` on selected rssItems
-    
+
     rssItems are checked against db formulaeResults table to see if an entry exist for the same formula applied to those filings, if `updateExistingResults` is set
     to False, formula will not be applied again to the same filings, if set to True, formula will be applied again. 
-    
+
     To touch db (insert or update) `insertResultIntoDb` must be set to True, this will trigger updating db existing formula results for same filings and inserting
     new results to db, if `insertResultIntoDb` is set to False, formula will be ran and result returned within the return dict with key "output".
 
     To make sure to apply formula to ALL selected filings (even if applied before and stored in db), set `updateExistingResults` to True. 
-    
+
     Formula output can be saved to files if `saveResultsToFolder` is set to True, but a valid path to a folder to save the files to must be set by `folderPath`.
 
     insertResultIntoDb = True AND updateExistingResults= True : process ALL filings and inserts/updates db
@@ -894,10 +891,10 @@ def runFormulaFromDBonRssItems(conn, rssItems, formulaId, additionalImports=None
     if saveResultsToFolder and not folderPath:
         cntlr.addToLog(_('folderPath must be a valid path to a dir to save formulae output to files'), messageCode="arellepy.Error", 
                             file=conn.conParams.get('database', ''),  level=logging.ERROR)
-        return        
-    
+        return
+
     qryRes = conn.getById([formulaId], 'formulae', 'formulaId', int)
-    
+
     if qryRes:
         formulaDict = qryRes[0]
     else:
@@ -914,7 +911,7 @@ def runFormulaFromDBonRssItems(conn, rssItems, formulaId, additionalImports=None
             cntlr.addToLog(_('Getting url for filing id {}').format(f_id), messageCode="arellepy.Info", file=conn.conParams['database'], level=logging.INFO)
             f_url = getExtractedXbrlInstance(x) if x.find('isInlineXBRL').text=='true' else x.url
             urls.append((f_id, f_url, f_inlineXbrl, x))
-        
+
         inputRes = makeFormulaDict(formulaString=formulaDict.get('formulaLinkbase', None), formulaSourceFile=formulaDict.get('fileName', None), 
                                     writeFormulaToSourceFile=False, formulaId=formulaDict.get('formulaId', None), tempDir=conn.cntlr.userAppTempDir)
         if inputRes['inputFile']:
