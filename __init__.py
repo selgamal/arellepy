@@ -229,7 +229,7 @@ def filingEnd(cntlr, options, filesource, _entrypointFiles, *args, **kwargs):
     modelXbrl.duplicateFactsInfo = DuplicateFacts(modelXbrl, cntlr)
     modelXbrl.profileStat(("arellepy: detect-duplicates"), time.time() - startedAt)
     modelXbrl.memory_change = cntlr.memoryUsed - memory_used_global
-    modelXbrl.load_end_time = time.time() 
+    modelXbrl.load_end_time = time.time()
     modelXbrl.load_start_time = time_start_global
     modelXbrl.time_to_load = modelXbrl.load_end_time - modelXbrl.load_start_time # profile stat capture load time also, this provides useful datetime for start/end
 
